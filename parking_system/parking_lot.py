@@ -20,16 +20,18 @@ class ParkingLot:
         self.address = address
         self.total_slots = total_slots
         self.available_slots = total_slots
-        self.slots: dict = self._init_parking_slots(total_slots)
+        self.slots: dict = self._init_parking_slots()
         self.status = status
         self.entry = entry
         self.exit = exit
 
-    def _init_parking_slots(self, total_slots: int):
-        for i in range(total_slots):
+    def _init_parking_slots(self) -> dict:
+        slots = {}
+        for i in range(self.total_slots):
             slot = Slot(
                 slot_id=f"SLOT-{i + 1}",
                 status=SlotStatus.AVAILABLE,
                 slot_type=ParkingSlotType.REGULAR,
             )
-            self.slots[slot.slot_id] = slot
+            slots[slot.slot_id] = slot
+        return slots
