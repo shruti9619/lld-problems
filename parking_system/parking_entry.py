@@ -1,5 +1,8 @@
+import logging
+
 from vehicle import Vehicle
 from random import randint
+
 
 class ParkingEntry:
     def __init__(self, entry_id: str, parking_lot=None):
@@ -25,6 +28,8 @@ class ParkingEntry:
             slot.occupy_slot()
             vehicle.assign_parking_slot(slot)
             self.close_checkpoint()
+
+            logging.info("Available slots after parking:")
             for slot in available_slots:
                 print(slot.get_slot_info())
             return True

@@ -1,3 +1,4 @@
+import logging
 from vehicle import Vehicle
 
 
@@ -43,3 +44,4 @@ class ParkingExit:
             f"Vehicle {vehicle.license_plate} has exited through exit {self.exit_id}."
         )
         self.close_checkpoint()
+        logging.info(f"Vehicle {vehicle.license_plate} exited successfully.\n")
