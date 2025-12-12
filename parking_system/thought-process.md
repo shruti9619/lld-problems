@@ -14,4 +14,8 @@
     - Parking Lot
     - Slot Status
     - Parking Lot Status
+    - Payment Method
 
+3. Class Design
+4. Implementation
+5. Exception Handling and other refinements
