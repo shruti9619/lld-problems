@@ -1,56 +1,65 @@
 import logging
-
 from parking_lot import ParkingLot
-from parking_enums import ParkingLotStatus
+from parking_enums import ParkingLotStatus, ParkingSlotType
+from parking_service import ParkingService
+from parking_strategy import NearestSpotStrategy
+from parking_entry import ParkingEntry
+from parking_exit import ParkingExit
+from vehicle import Car, Motorcycle, Truck
 
 logging.basicConfig(level=logging.INFO)
 
 
 def create_parking_lot():
-    logging.info("Creating parking lot...")
-    parking_lot = ParkingLot(
+    slot_distribution = {
+        ParkingSlotType.MOTORCYCLE: 1,
+        ParkingSlotType.COMPACT: 1,
+        ParkingSlotType.LARGE: 0,
+    }
+    return ParkingLot(
         name="Downtown Parking",
         id="DL123",
         address="123 Main St, Downtown",
-        total_slots=2,
+        slot_distribution=slot_distribution,
         status=ParkingLotStatus.OPEN,
     )
-    return parking_lot
+
+
+def create_parking_system(parking_lot):
+    strategy = NearestSpotStrategy()
+    service = ParkingService(parking_lot, strategy)
+    entries = [
+        ParkingEntry(f"ENTRY-{i}", service) for i in range(1, 3)
+    ]  # Multiple gates
+    exits = [ParkingExit(f"EXIT-{i}", service) for i in range(1, 3)]
+    return service, entries, exits
 
 
 def create_vehicles():
-    logging.info("Creating vehicles...")
-    from vehicle import Car, Motorcycle, Truck
-
-    car = Car(license_plate="CAR-1234")
-    motorcycle = Motorcycle(license_plate="MOTO-5678")
-    truck = Truck(license_plate="TRUCK-9012")
-
-    return [car, motorcycle, truck]
+    return [
+        Car(license_plate="CAR-1234"),
+        Motorcycle(license_plate="MOTO-5678"),
+        Truck(license_plate="TRUCK-9012"),
+    ]
 
 
 def run_parking_system():
     parking_lot = create_parking_lot()
+    service, entries, exits = create_parking_system(parking_lot)
     vehicles = create_vehicles()
-    logging.info("Parking lot and vehicles created successfully.\n\n\n")
+    tickets = {}
 
     for vehicle in vehicles:
-        logging.info(f"Processing entry for vehicle {vehicle.license_plate}...\n")
-        if parking_lot.entry.process_vehicle_entry(vehicle):
-            logging.info(f"Vehicle {vehicle.license_plate} parked successfully.\n\n\n")
-        else:
-            logging.warning(
-                f"No available slots for vehicle {vehicle.license_plate}.\n\n\n"
-            )
+        entry = entries[0]  # Use first gate
+        ticket = entry.process_vehicle_entry(vehicle)
+        if ticket:
+            tickets[vehicle.license_plate] = ticket.ticket_id
 
     for vehicle in vehicles:
-        logging.info(f"Processing exit for vehicle {vehicle.license_plate}...\n")
-        from random import randint
-        if vehicle.is_parked:
-            vehicle.parking_slot.occupied_duration = randint(2,5)  # Simulate 2 hours of parking
-        parking_lot.exit.process_vehicle_exit(vehicle)
-
-    logging.info("\n\n\nParking system simulation completed.")
+        exit_gate = exits[0]  # Use first gate
+        ticket_id = tickets.get(vehicle.license_plate)
+        if ticket_id:
+            exit_gate.process_vehicle_exit(ticket_id)
 
 
 if __name__ == "__main__":

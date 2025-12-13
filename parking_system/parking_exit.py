@@ -1,13 +1,13 @@
 import logging
-from vehicle import Vehicle
+from parking_service import ParkingService
+from parking_ticket import ParkingTicket
 
 
 class ParkingExit:
-    def __init__(self, exit_id: str, parking_lot=None):
+    def __init__(self, exit_id: str, parking_service: ParkingService):
         self.exit_id = exit_id
-        self.is_available = True
+        self.parking_service = parking_service
         self.checkpoint_open = False
-        self.parking_lot = parking_lot
 
     def open_checkpoint(self):
         self.checkpoint_open = True
@@ -15,38 +15,27 @@ class ParkingExit:
     def close_checkpoint(self):
         self.checkpoint_open = False
 
-    def process_payment(self, vehicle: Vehicle, payment_method: str):
-        vehicle_info = vehicle.get_vehicle_info()
-        logging.info(f"Processing {payment_method} payment for vehicle {vehicle_info}")
-        # Process payment logic here
-        charge = 10 * vehicle.parking_slot.occupied_duration  # Dummy charge
+    def process_payment(self, ticket: ParkingTicket, payment_method: str) -> bool:
+        duration = ticket.get_duration_hours()
+        charge = 10 * duration  # $10 per hour
         logging.info(
-            f"Payment of ${charge} received for vehicle {vehicle.license_plate} via {payment_method}."
+            f"Payment of ${charge:.2f} received for vehicle {ticket.vehicle.license_plate} via {payment_method}."
         )
         return True
 
-    def process_vehicle_exit(self, vehicle: Vehicle):
-        vehicle_lookup = self.parking_lot.search_vehicle(vehicle.license_plate)
-        if not vehicle_lookup:
-            print(f"Vehicle {vehicle.license_plate} not found in the parking lot.")
-            return
+    def process_vehicle_exit(
+        self, ticket_id: str, payment_method: str = "CASH"
+    ) -> bool:
+        ticket = self.parking_service.unpark_vehicle(ticket_id)
+        if not ticket:
+            logging.error(f"Ticket {ticket_id} not found.")
+            return False
 
-        if self.process_payment(vehicle, payment_method="CASH"):
-            logging.info(f"Exit Authorized for vehicle {vehicle.license_plate}.")
-        else:
-            logging.error(
-                f"Payment failed for vehicle {vehicle.license_plate}. Exit Denied."
-            )
-            return
+        if not self.process_payment(ticket, payment_method):
+            logging.error(f"Payment failed for ticket {ticket_id}. Exit Denied.")
+            return False
 
         self.open_checkpoint()
-
-        old_slot = vehicle.remove_from_parking_slot()
-        old_slot.vacate_slot()
-
         self.close_checkpoint()
-        logging.info(f"Vehicle {vehicle.license_plate} exited successfully.\n")
-
-        logging.info("Available slots after exit:")
-        for slot in self.parking_lot.get_available_slots():
-            print(slot.get_slot_info())
+        logging.info(f"Vehicle {ticket.vehicle.license_plate} exited successfully.")
+        return True
