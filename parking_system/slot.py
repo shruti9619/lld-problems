@@ -16,7 +16,7 @@ class Slot:
         self.slot_id = slot_id
         self.slot_type = slot_type
         self.status = status
-        self.occupied_duration = 0  # in hours
+        self.occupied_duration = 1  # in hours
         self.occupied_vehicle = None
         self.vehicle = vehicle
 
@@ -25,6 +25,8 @@ class Slot:
 
     def vacate_slot(self):
         self.status = SlotStatus.AVAILABLE
+        self.vehicle = None
+        self.occupied_duration = 1
 
     def get_slot_info(self):
         return {

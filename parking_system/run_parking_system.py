@@ -32,23 +32,25 @@ def create_vehicles():
 def run_parking_system():
     parking_lot = create_parking_lot()
     vehicles = create_vehicles()
-    logging.info("Parking lot and vehicles created successfully.\n\n")
+    logging.info("Parking lot and vehicles created successfully.\n\n\n")
 
     for vehicle in vehicles:
         logging.info(f"Processing entry for vehicle {vehicle.license_plate}...\n")
         if parking_lot.entry.process_vehicle_entry(vehicle):
-            logging.info(f"Vehicle {vehicle.license_plate} parked successfully.\n")
+            logging.info(f"Vehicle {vehicle.license_plate} parked successfully.\n\n\n")
         else:
             logging.warning(
-                f"No available slots for vehicle {vehicle.license_plate}.\n"
+                f"No available slots for vehicle {vehicle.license_plate}.\n\n\n"
             )
-        logging.info("\n\n")
 
     for vehicle in vehicles:
         logging.info(f"Processing exit for vehicle {vehicle.license_plate}...\n")
+        from random import randint
+        if vehicle.is_parked:
+            vehicle.parking_slot.occupied_duration = randint(2,5)  # Simulate 2 hours of parking
         parking_lot.exit.process_vehicle_exit(vehicle)
 
-    logging.info("Parking system simulation completed.")
+    logging.info("\n\n\nParking system simulation completed.")
 
 
 if __name__ == "__main__":

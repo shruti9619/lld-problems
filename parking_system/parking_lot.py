@@ -43,5 +43,5 @@ class ParkingLot:
     def search_vehicle(self, license_plate: str):
         for slot in self.slots.values():
             if slot.vehicle and slot.vehicle.license_plate == license_plate:
-                return slot.vehicle
-        return None
+                return True
+        return False
