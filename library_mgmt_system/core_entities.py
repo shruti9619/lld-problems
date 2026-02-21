@@ -31,6 +31,7 @@ class User:
     id: int
     name: str
     dues: float = 0.0
+    borrowed_copy_id: list[int] = []
 
     def __init__(self, id: int, name: str):
         self.id = id
@@ -59,6 +60,7 @@ class BorrowRecord(BaseModel):
     due_date: str
     return_date: Union[str, None] = None
     status: BorrowStatus = BorrowStatus.BORROWED
+    due_amt: int = 0
 
 class LibManagementSystem:
     def __init__(self):
@@ -98,7 +100,7 @@ class LibManagementSystem:
         else:
             return False
 
-    def borrow_book(self, user_id: int, book_id: int):
+    def borrow_book(self, user: User, book_id: int):
         is_available = self.get_book_availability(book_id)
         if not is_available:
             raise ValueError("Book not available")
@@ -109,31 +111,49 @@ class LibManagementSystem:
 
         book_copy.book_copy_status = BookStatus.BORROWED
         self.books[book_id].available_copies -= 1
-        borrow_record = BorrowRecord(id=len(self.borrow_records)+1, user_id=user_id, 
+        borrow_record = BorrowRecord(id=len(self.borrow_records)+1, user_id=user.id, 
                                      book_copy_id=book_copy.id, borrow_date=str(datetime.now()),
                                      due_date = str(datetime.now())
                                      )
         # Save borrow_record to database or in-memory list
         self.borrow_records.append(borrow_record)
+        user.borrowed_copy_id.append(book_copy.id)
 
+    def _calc_penalty(self, borrow_record: BorrowRecord):
+        if penalty_days := (datetime.now() - borrow_record.due_date).days > 0:
+            borrow_record.due_amt = penalty_days * 10
+            return borrow_record.due_amt
+        else:
+            return 0.0
 
-    def check_pending_dues(self, user_id: int) -> float:
-        return 1.0
-    
-    def return_book(self, user_id: int, book_id: int):
-        book_copy = next((bc for bc in self.book_copies if bc.book_id == book_id and bc.book_copy_status == BookStatus.BORROWED), None)
-        if not book_copy:
-            raise ValueError("No borrowed copies found")
-        
-        # todo: design function to cjeck dues from borrow record
-        if self.check_pending_dues(user_id) > 0:
-            raise ValueError("User has pending dues")
-            # todo: handle this by checking borrow record and asking user to pay
+    def _find_borrow_record(self, user_id: int, book_copy_id: int) -> Union[BorrowRecord, None]:
+        return next((br for br in self.borrow_records if br.user_id == user_id and br.book_copy_id == book_copy_id), None)
+
+    def check_pending_dues(self, borrow_record: BorrowRecord) -> float:
+        # lookup borrow_records
+        if borrow_record:
+            return self._calc_penalty(borrow_record)
+        else:
+            raise Exception("User Borrow Record Not Found")
+
+    def request_due_clearance(self, user, borrow_record: BorrowRecord, dues: float):
+        print(f"User clearing due of amount: {dues}")
+        borrow_record.due_amt = 0
+
+    def return_book(self, user: User, book_copy: BookCopy):
+        borrow_record: Union[BorrowRecord, None] = self._find_borrow_record(user_id= user.id, 
+                                                               book_copy_id= book_copy.id)
+        if borrow_record is None:
+            raise Exception("Borrow record not found!")
+
+        if (dues:= self.check_pending_dues(borrow_record)) > 0:
+            self.request_due_clearance(user, borrow_record, dues)
 
         book_copy.book_copy_status = BookStatus.AVAILABLE
-        self.books[book_id].available_copies += 1
+        self.books[book_copy.book_id].available_copies += 1
 
-        # find borrowrecord and update it
+        borrow_record.status = BorrowStatus.RETURNED
+
 
 
 
