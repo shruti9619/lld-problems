@@ -111,28 +111,29 @@ class LibManagementSystem:
         self.books[book_id].available_copies -= 1
         borrow_record = BorrowRecord(id=len(self.borrow_records)+1, user_id=user_id, 
                                      book_copy_id=book_copy.id, borrow_date=str(datetime.now()),
-                                     due_date = 
+                                     due_date = str(datetime.now())
                                      )
         # Save borrow_record to database or in-memory list
         self.borrow_records.append(borrow_record)
 
 
     def check_pending_dues(self, user_id: int) -> float:
-        user = next((u for u in self.users if u.id == user_id), None)
-        if not user:
-            raise ValueError("User not found")
-        return user.dues
+        return 1.0
     
     def return_book(self, user_id: int, book_id: int):
         book_copy = next((bc for bc in self.book_copies if bc.book_id == book_id and bc.book_copy_status == BookStatus.BORROWED), None)
         if not book_copy:
             raise ValueError("No borrowed copies found")
         
+        # todo: design function to cjeck dues from borrow record
         if self.check_pending_dues(user_id) > 0:
             raise ValueError("User has pending dues")
+            # todo: handle this by checking borrow record and asking user to pay
 
         book_copy.book_copy_status = BookStatus.AVAILABLE
         self.books[book_id].available_copies += 1
+
+        # find borrowrecord and update it
 
 
 
