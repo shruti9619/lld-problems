@@ -4,6 +4,7 @@ from core_enums import BookStatus, LibStatus, BorrowStatus
 from typing import Union
 from datetime import datetime
 
+
 class Book(BaseModel):
     id: int
     title: str
@@ -12,20 +13,24 @@ class Book(BaseModel):
     total_copies: int
     borrowed: int = 0
 
+
 class BookCopy(BaseModel):
     id: int
     book_id: int
     book_copy_status: BookStatus
     library_id: int
 
+
 class Library(BaseModel):
     id: int
     name: str
     status: LibStatus
 
+
 class LibWallet(BaseModel):
     id: int
     balance: float = 0.0
+
 
 class User:
     id: int
@@ -52,6 +57,7 @@ class Staff(BaseModel):
     name: str
     role: str
 
+
 class BorrowRecord(BaseModel):
     id: int
     user_id: int
@@ -61,6 +67,7 @@ class BorrowRecord(BaseModel):
     return_date: Union[str, None] = None
     status: BorrowStatus = BorrowStatus.BORROWED
     due_amt: int = 0
+
 
 class LibManagementSystem:
     def __init__(self):
@@ -77,11 +84,14 @@ class LibManagementSystem:
 
     def add_book(self, book: Book, library_id: int):
         self.books.append(book)
-        self._add_book_copy(BookCopy(id=len(self.book_copies)+1, 
-                                     book_id=book.id, 
-                                     book_copy_status=BookStatus.AVAILABLE, 
-                                     library_id=library_id))
-
+        self._add_book_copy(
+            BookCopy(
+                id=len(self.book_copies) + 1,
+                book_id=book.id,
+                book_copy_status=BookStatus.AVAILABLE,
+                library_id=library_id,
+            )
+        )
 
     def _add_book_copy(self, book_copy: BookCopy):
         self.book_copies.append(book_copy)
@@ -101,20 +111,36 @@ class LibManagementSystem:
             return False
 
     def borrow_book(self, user: User, book_id: int):
+        print(f"User {user.name} is requesting to borrow book with id: {book_id}")
         is_available = self.get_book_availability(book_id)
         if not is_available:
             raise ValueError("Book not available")
 
-        book_copy = next((bc for bc in self.book_copies if bc.book_id == book_id and bc.book_copy_status == BookStatus.AVAILABLE), None)
+        book_copy = next(
+            (
+                bc
+                for bc in self.book_copies
+                if bc.book_id == book_id and bc.book_copy_status == BookStatus.AVAILABLE
+            ),
+            None,
+        )
         if not book_copy:
             raise ValueError("No available copies")
 
         book_copy.book_copy_status = BookStatus.BORROWED
-        self.books[book_id].available_copies -= 1
-        borrow_record = BorrowRecord(id=len(self.borrow_records)+1, user_id=user.id, 
-                                     book_copy_id=book_copy.id, borrow_date=str(datetime.now()),
-                                     due_date = str(datetime.now())
-                                     )
+        borrow_record = BorrowRecord(
+            id=len(self.borrow_records) + 1,
+            user_id=user.id,
+            book_copy_id=book_copy.id,
+            borrow_date=str(datetime.now()),
+            due_date=str(datetime.now()),
+        )
+
+        # update available copies count
+        book = next((b for b in self.books if b.id == book_copy.book_id), None)
+        if book:
+            book.available_copies -= 1
+
         # Save borrow_record to database or in-memory list
         self.borrow_records.append(borrow_record)
         user.borrowed_copy_id.append(book_copy.id)
@@ -126,8 +152,17 @@ class LibManagementSystem:
         else:
             return 0.0
 
-    def _find_borrow_record(self, user_id: int, book_copy_id: int) -> Union[BorrowRecord, None]:
-        return next((br for br in self.borrow_records if br.user_id == user_id and br.book_copy_id == book_copy_id), None)
+    def _find_borrow_record(
+        self, user_id: int, book_copy_id: int
+    ) -> Union[BorrowRecord, None]:
+        return next(
+            (
+                br
+                for br in self.borrow_records
+                if br.user_id == user_id and br.book_copy_id == book_copy_id
+            ),
+            None,
+        )
 
     def check_pending_dues(self, borrow_record: BorrowRecord) -> float:
         # lookup borrow_records
@@ -141,19 +176,16 @@ class LibManagementSystem:
         borrow_record.due_amt = 0
 
     def return_book(self, user: User, book_copy: BookCopy):
-        borrow_record: Union[BorrowRecord, None] = self._find_borrow_record(user_id= user.id, 
-                                                               book_copy_id= book_copy.id)
+        borrow_record: Union[BorrowRecord, None] = self._find_borrow_record(
+            user_id=user.id, book_copy_id=book_copy.id
+        )
         if borrow_record is None:
             raise Exception("Borrow record not found!")
 
-        if (dues:= self.check_pending_dues(borrow_record)) > 0:
+        if (dues := self.check_pending_dues(borrow_record)) > 0:
             self.request_due_clearance(user, borrow_record, dues)
 
         book_copy.book_copy_status = BookStatus.AVAILABLE
         self.books[book_copy.book_id].available_copies += 1
 
         borrow_record.status = BorrowStatus.RETURNED
-
-
-
-
